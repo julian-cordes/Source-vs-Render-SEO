@@ -1,0 +1,45 @@
+{
+  "manifest_version": 3,
+  "name": "Source vs Render SEO",
+  "version": "1.0.0",
+  "description": "Compares raw HTML vs. rendered DOM for SEO fields and shows indexability/rendering changes in the icon.",
+
+  "permissions": [
+    "activeTab",
+    "offscreen",
+    "scripting",
+    "storage",
+    "tabs",
+    "webNavigation"
+  ],
+  "host_permissions": ["<all_urls>"],
+
+  "background": {
+    "service_worker": "src/background/service-worker.js",
+    "type": "module"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/content/content-script.js"],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "action": {
+    "default_popup": "src/popup/popup.html",
+    "default_title": "Source vs Render SEO",
+    "default_icon": {
+      "16": "icons/status/indexable-no-js-diff-16.png",
+      "48": "icons/status/indexable-no-js-diff-48.png",
+      "96": "icons/status/indexable-no-js-diff-96.png"
+    }
+  },
+
+  "icons": {
+    "16": "icons/store/source-vs-render-seo-16.png",
+    "48": "icons/store/source-vs-render-seo-48.png",
+    "128": "icons/store/source-vs-render-seo-128.png"
+  }
+}
