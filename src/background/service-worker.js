@@ -12,20 +12,20 @@ import { compareSeoFields } from '../shared/seo-fields.js';
 // ---------------------------------------------------------------------------
 
 const ICON_PATHS = {
-  'indexable-no-js-diff': iconPath('indexable-no-js-diff'),
-  'indexable-content-diff': iconPath('indexable-content-diff'),
-  'indexable-index-diff': iconPath('indexable-index-diff'),
-  'indexable-content-index-diff': iconPath('indexable-content-index-diff'),
-  'not-indexable-no-js-diff': iconPath('not-indexable-no-js-diff'),
-  'not-indexable-content-diff': iconPath('not-indexable-content-diff'),
-  'not-indexable-index-diff': iconPath('not-indexable-index-diff'),
-  'not-indexable-content-index-diff': iconPath('not-indexable-content-index-diff'),
+  'indexable-no-js-diff': iconPaths('indexable-no-js-diff'),
+  'indexable-content-diff': iconPaths('indexable-content-diff'),
+  'indexable-index-diff': iconPaths('indexable-index-diff'),
+  'indexable-content-index-diff': iconPaths('indexable-content-index-diff'),
+  'not-indexable-no-js-diff': iconPaths('not-indexable-no-js-diff'),
+  'not-indexable-content-diff': iconPaths('not-indexable-content-diff'),
+  'not-indexable-index-diff': iconPaths('not-indexable-index-diff'),
+  'not-indexable-content-index-diff': iconPaths('not-indexable-content-index-diff'),
 };
 
 const INDEXABILITY_DIFF_FIELDS = ['metaRobots', 'canonical'];
 const CONTENT_DIFF_FIELDS = ['title', 'metaDescription', 'h1s', 'hreflangs'];
 const LOADING_ICON_PATH = ICON_PATHS['indexable-no-js-diff'];
-const ANALYSIS_VERSION = 'analysis-mode-v2';
+const ANALYSIS_VERSION = 'analysis-mode-v3';
 const ANALYSIS_MODE_KEY = 'seoInspectorAnalysisMode';
 const ANALYSIS_MODES = {
   COMPARE: 'compare',
@@ -53,6 +53,7 @@ const ANALYSIS_MODE_LABELS = {
 const iconImageDataCache = new Map();
 const activeAnalysisTokens = new Map();
 let nextAnalysisToken = 0;
+let offscreenDocumentPromise = null;
 
 // ---------------------------------------------------------------------------
 // Event listeners
@@ -129,7 +130,7 @@ async function analyzeTab(tabId, url, requestedMode) {
   // 1. Fetch raw HTML + HTTP status
   if (needsSource) {
     try {
-      const resp = await fetch(url, { cache: 'default' });
+      const resp = await fetch(url, { cache: 'no-cache' });
       httpStatus = resp.status;
       const html = await resp.text();
       sourceFields = await parseRawHtml(html);
@@ -156,7 +157,7 @@ async function analyzeTab(tabId, url, requestedMode) {
   // 3. Compare (only if both available)
   let comparison = null;
   if (analysisMode === ANALYSIS_MODES.COMPARE && sourceFields && renderedFields) {
-    comparison = compareSeoFields(sourceFields, renderedFields);
+    comparison = compareSeoFields(sourceFields, renderedFields, url);
   } else if (analysisMode === ANALYSIS_MODES.COMPARE && (sourceFields || renderedFields)) {
     analysisState = analysisState === 'ok' ? 'partial' : analysisState;
   }
@@ -270,13 +271,24 @@ async function parseRawHtml(html) {
 }
 
 async function ensureOffscreenDocument() {
-  const has = await chrome.offscreen.hasDocument();
-  if (!has) {
-    await chrome.offscreen.createDocument({
-      url: chrome.runtime.getURL('src/offscreen/offscreen.html'),
-      reasons: ['DOM_PARSER'],
-      justification: 'Parse raw HTML to extract SEO fields',
-    });
+  if (offscreenDocumentPromise) return offscreenDocumentPromise;
+
+  offscreenDocumentPromise = (async () => {
+    const has = await chrome.offscreen.hasDocument();
+    if (!has) {
+      await chrome.offscreen.createDocument({
+        url: chrome.runtime.getURL('src/offscreen/offscreen.html'),
+        reasons: ['DOM_PARSER'],
+        justification: 'Parse raw HTML to extract SEO fields',
+      });
+    }
+  })();
+
+  try {
+    await offscreenDocumentPromise;
+  } catch (err) {
+    offscreenDocumentPromise = null;
+    throw err;
   }
 }
 
@@ -335,13 +347,13 @@ function applyIcon(tabId, result) {
 }
 
 async function setIcon(tabId, iconPath) {
-  const path = iconPath ?? LOADING_ICON_PATH;
+  const paths = iconPath ?? LOADING_ICON_PATH;
 
   try {
-    const imageData = await getIconImageData(path);
+    const imageData = await getIconImageDataSet(paths);
     await setActionIcon(tabId, imageData);
   } catch (err) {
-    console.warn('[Source vs Render SEO] setIcon failed:', err.message, path);
+    console.warn('[Source vs Render SEO] setIcon failed:', err.message, paths);
   }
 
   try {
@@ -353,7 +365,7 @@ async function setIcon(tabId, iconPath) {
 
 function setActionIcon(tabId, imageData) {
   return new Promise((resolve, reject) => {
-    chrome.action.setIcon({ tabId, imageData: { 48: imageData } }, () => {
+    chrome.action.setIcon({ tabId, imageData }, () => {
       const err = chrome.runtime.lastError;
       if (err) {
         reject(new Error(err.message));
@@ -384,6 +396,13 @@ async function getIconImageData(path) {
   return iconImageDataCache.get(path);
 }
 
+async function getIconImageDataSet(paths) {
+  const entries = await Promise.all(
+    Object.entries(paths).map(async ([size, path]) => [size, await getIconImageData(path)]),
+  );
+  return Object.fromEntries(entries);
+}
+
 async function loadIconImageData(path) {
   const resp = await fetch(chrome.runtime.getURL(path));
   if (!resp.ok) {
@@ -391,12 +410,13 @@ async function loadIconImageData(path) {
   }
 
   const bitmap = await createImageBitmap(await resp.blob());
-  const canvas = new OffscreenCanvas(48, 48);
+  const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
   const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, 48, 48);
-  ctx.drawImage(bitmap, 0, 0, 48, 48);
+  ctx.clearRect(0, 0, bitmap.width, bitmap.height);
+  ctx.drawImage(bitmap, 0, 0);
+  const imageData = ctx.getImageData(0, 0, bitmap.width, bitmap.height);
   bitmap.close();
-  return ctx.getImageData(0, 0, 48, 48);
+  return imageData;
 }
 
 function getStatusIconKey(result) {
@@ -468,8 +488,12 @@ function normalizeComparableUrl(value, baseUrl) {
   }
 }
 
-function iconPath(name) {
-  return `icons/status/${name}-48.png`;
+function iconPaths(name) {
+  return {
+    16: `icons/status/${name}-16.png`,
+    48: `icons/status/${name}-48.png`,
+    96: `icons/status/${name}-96.png`,
+  };
 }
 
 // ---------------------------------------------------------------------------

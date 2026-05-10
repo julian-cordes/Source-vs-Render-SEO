@@ -61,13 +61,14 @@ function normRobots(v) {
   return v === null ? null : v.trim().toLowerCase();
 }
 
-function normCanonical(v) {
+function normCanonical(v, baseUrl) {
   if (v === null) return null;
   try {
-    const url = new URL(v);
-    // lowercase scheme + host, remove trailing slash from pathname
+    const url = baseUrl ? new URL(v, baseUrl) : new URL(v);
+    // Lowercase scheme + host, remove trailing slash from pathname.
+    // Ignore hash fragments so comparison matches indexability checks.
     let path = url.pathname.replace(/\/$/, '') || '/';
-    return `${url.protocol.toLowerCase()}//${url.host.toLowerCase()}${path}${url.search}${url.hash}`;
+    return `${url.protocol.toLowerCase()}//${url.host.toLowerCase()}${path}${url.search}`;
   } catch {
     return v.trim();
   }
@@ -91,16 +92,17 @@ function normHreflangs(v) {
  * Compare source SeoFields vs rendered SeoFields.
  * @param {SeoFields} source
  * @param {SeoFields} rendered
+ * @param {string} [pageUrl]
  * @returns {CompareResult}
  */
-export function compareSeoFields(source, rendered) {
+export function compareSeoFields(source, rendered, pageUrl) {
   const fields = {};
   let hasDiff = false;
 
   fields.title = compareField(source.title, rendered.title, normTitle);
   fields.metaDescription = compareField(source.metaDescription, rendered.metaDescription, normDescription);
   fields.metaRobots = compareField(source.metaRobots, rendered.metaRobots, normRobots);
-  fields.canonical = compareField(source.canonical, rendered.canonical, normCanonical);
+  fields.canonical = compareField(source.canonical, rendered.canonical, normCanonical, pageUrl);
   fields.h1s = compareArrayField(source.h1s, rendered.h1s, normH1s);
   fields.hreflangs = compareArrayField(source.hreflangs, rendered.hreflangs, normHreflangs);
 
@@ -111,9 +113,9 @@ export function compareSeoFields(source, rendered) {
   return { fields, hasDiff };
 }
 
-function compareField(src, ren, normFn) {
-  const ns = normFn(src);
-  const nr = normFn(ren);
+function compareField(src, ren, normFn, ...args) {
+  const ns = normFn(src, ...args);
+  const nr = normFn(ren, ...args);
   if (ns === null && nr === null) return { diff: false, source: null, rendered: null };
   const diff = ns !== nr;
   return { diff, source: src, rendered: ren };

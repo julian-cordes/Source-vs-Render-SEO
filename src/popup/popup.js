@@ -47,6 +47,7 @@ function renderShell(data) {
   const shell = div('shell');
   shell.appendChild(renderHeader());
   shell.appendChild(renderOverview(data));
+  shell.appendChild(renderAnalysisNotice(data));
   shell.appendChild(renderQuickCheck(data));
   shell.appendChild(renderImportantSignals(data));
   return shell;
@@ -167,6 +168,29 @@ function statusCard({ tone, icon, title, subtitle }) {
   card.appendChild(mark);
   card.appendChild(copy);
   return card;
+}
+
+function renderAnalysisNotice(data) {
+  const notice = div('analysis-notice');
+  if (data.analysisState === 'ok') return notice;
+
+  const title = div('analysis-notice__title');
+  title.textContent = 'Analysis incomplete';
+  const text = div('analysis-notice__text');
+
+  if (data.url?.startsWith('file://') && data.analysisState === 'source_unavailable') {
+    text.textContent = 'Raw HTML source may be unavailable for file:// pages. Enable file URL access for the extension or use a local HTTP server.';
+  } else if (data.analysisState === 'source_unavailable') {
+    text.textContent = 'Raw HTML source could not be fetched. Rendered DOM data may still be available.';
+  } else if (data.analysisState === 'rendered_unavailable') {
+    text.textContent = 'Rendered DOM data could not be read from the tab.';
+  } else {
+    text.textContent = 'Only partial SEO data is available for this page.';
+  }
+
+  notice.appendChild(title);
+  notice.appendChild(text);
+  return notice;
 }
 
 function renderQuickCheck(data) {
