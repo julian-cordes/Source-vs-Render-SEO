@@ -30,7 +30,8 @@
   function getH1s() {
     const els = document.querySelectorAll('h1');
     if (!els.length) return null;
-    return Array.from(els).map(el => el.textContent.trim()).filter(Boolean);
+    const h1s = Array.from(els).map(el => el.textContent.trim()).filter(Boolean);
+    return h1s.length ? h1s : null;
   }
 
   function getHreflangs() {

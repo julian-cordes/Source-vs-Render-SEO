@@ -184,6 +184,8 @@ function renderAnalysisNotice(data) {
     text.textContent = 'Raw HTML source could not be fetched. Rendered DOM data may still be available.';
   } else if (data.analysisState === 'rendered_unavailable') {
     text.textContent = 'Rendered DOM data could not be read from the tab.';
+  } else if (data.analysisState === 'both_unavailable') {
+    text.textContent = 'Raw HTML source and rendered DOM data could not be read for this page.';
   } else {
     text.textContent = 'Only partial SEO data is available for this page.';
   }
@@ -215,7 +217,10 @@ function renderQuickRow(key, data) {
 
 function canonicalQuickRow(data) {
   const fieldResult = data.comparison?.fields?.canonical;
-  const row = infoRow('target', 'Canonical', displayValue('canonical', getFieldValue('canonical', data), data));
+  const row = infoRow('target', 'Canonical', getFieldValue('canonical', data), {
+    fieldKey: 'canonical',
+    data,
+  });
 
   if (data.analysisMode !== 'compare' || !fieldResult?.diff) {
     return row;
@@ -310,7 +315,7 @@ function appendValueContent(el, key, value, data) {
   if (key === 'h1s') {
     renderArrayValue(el, display);
   } else if (key === 'hreflangs') {
-    renderHreflangs(el, display);
+    renderHreflangs(el, display, data);
   } else if (key === 'metaRobots') {
     el.textContent = display;
   } else if (key === 'canonical') {
@@ -387,6 +392,11 @@ function renderArrayValue(el, value) {
     return;
   }
 
+  if (value.length === 1) {
+    el.textContent = value[0];
+    return;
+  }
+
   const list = document.createElement('ol');
   list.className = 'value-list';
   value.forEach((item) => {
@@ -423,6 +433,9 @@ function renderExternalLink(href, text) {
   link.target = '_blank';
   link.rel = 'noopener noreferrer';
   const label = span('external-link__text');
+  const title = text ?? href;
+  link.title = title;
+  label.title = title;
   label.textContent = text;
   link.appendChild(label);
   return link;

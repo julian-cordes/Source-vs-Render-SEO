@@ -33,7 +33,8 @@ function getCanonical(doc) {
 function getH1s(doc) {
   const els = doc.querySelectorAll('h1');
   if (!els.length) return null;
-  return Array.from(els).map(el => el.textContent.trim()).filter(Boolean);
+  const h1s = Array.from(els).map(el => el.textContent.trim()).filter(Boolean);
+  return h1s.length ? h1s : null;
 }
 
 function getHreflangs(doc) {
@@ -76,7 +77,7 @@ function normCanonical(v, baseUrl) {
 
 function normH1s(v) {
   if (v === null) return null;
-  return [...v].sort();
+  return [...v];
 }
 
 function normHreflangs(v) {

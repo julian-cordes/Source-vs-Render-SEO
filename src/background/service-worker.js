@@ -25,7 +25,7 @@ const ICON_PATHS = {
 const INDEXABILITY_DIFF_FIELDS = ['metaRobots', 'canonical'];
 const CONTENT_DIFF_FIELDS = ['title', 'metaDescription', 'h1s', 'hreflangs'];
 const LOADING_ICON_PATH = ICON_PATHS['indexable-no-js-diff'];
-const ANALYSIS_VERSION = 'analysis-mode-v3';
+const ANALYSIS_VERSION = 'analysis-mode-v6';
 const ANALYSIS_MODE_KEY = 'seoInspectorAnalysisMode';
 const ANALYSIS_MODES = {
   COMPARE: 'compare',
@@ -89,6 +89,8 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 
 // Popup requests stored data
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (!isTrustedExtensionSender(sender)) return false;
+
   if (msg.type === 'GET_SEO_DATA') {
     handleSeoDataRequest()
       .then(sendResponse)
@@ -125,7 +127,7 @@ async function analyzeTab(tabId, url, requestedMode) {
   let httpStatus = null;
   let sourceFields = null;
   let renderedFields = null;
-  let analysisState = 'ok'; // ok | source_unavailable | rendered_unavailable | partial
+  let analysisState = 'ok'; // ok | source_unavailable | rendered_unavailable | partial | both_unavailable
 
   // 1. Fetch raw HTML + HTTP status
   if (needsSource) {
@@ -147,7 +149,7 @@ async function analyzeTab(tabId, url, requestedMode) {
     } catch (err) {
       console.warn('[Source vs Render SEO] content script failed:', err.message);
       if (analysisState === 'source_unavailable') {
-        analysisState = 'partial'; // both failed
+        analysisState = 'both_unavailable';
       } else {
         analysisState = 'rendered_unavailable';
       }
@@ -258,30 +260,45 @@ async function restoreIconForActivatedTab(tabId) {
 async function parseRawHtml(html) {
   await ensureOffscreenDocument();
   return new Promise((resolve, reject) => {
-    chrome.runtime.sendMessage({ type: 'PARSE_RAW_HTML', html }, (resp) => {
-      if (chrome.runtime.lastError) {
-        reject(new Error(chrome.runtime.lastError.message));
-      } else if (resp && resp.ok) {
+    const port = chrome.runtime.connect({ name: 'PARSE_RAW_HTML' });
+    let settled = false;
+
+    port.onMessage.addListener((resp) => {
+      if (settled) return;
+      settled = true;
+      port.disconnect();
+      if (resp?.ok) {
         resolve(resp.fields);
       } else {
         reject(new Error(resp?.error ?? 'parse failed'));
       }
     });
+
+    port.onDisconnect.addListener(() => {
+      if (settled) return;
+      settled = true;
+      const err = chrome.runtime.lastError;
+      reject(new Error(err?.message ?? 'offscreen parser disconnected'));
+    });
+
+    port.postMessage({ html });
   });
 }
 
 async function ensureOffscreenDocument() {
-  if (offscreenDocumentPromise) return offscreenDocumentPromise;
+  if (offscreenDocumentPromise) {
+    await offscreenDocumentPromise;
+  }
+
+  if (await chrome.offscreen.hasDocument()) return;
 
   offscreenDocumentPromise = (async () => {
-    const has = await chrome.offscreen.hasDocument();
-    if (!has) {
-      await chrome.offscreen.createDocument({
-        url: chrome.runtime.getURL('src/offscreen/offscreen.html'),
-        reasons: ['DOM_PARSER'],
-        justification: 'Parse raw HTML to extract SEO fields',
-      });
-    }
+    if (await chrome.offscreen.hasDocument()) return;
+    await chrome.offscreen.createDocument({
+      url: chrome.runtime.getURL('src/offscreen/offscreen.html'),
+      reasons: ['DOM_PARSER'],
+      justification: 'Parse raw HTML to extract SEO fields',
+    });
   })();
 
   try {
@@ -461,6 +478,7 @@ function hasAnyFieldDiff(comparison, fields) {
 }
 
 function isPageIndexable(fields, pageUrl) {
+  if (!fields) return false;
   return !hasNoindexDirective(fields.metaRobots) && hasSelfReferencingCanonical(fields.canonical, pageUrl);
 }
 
@@ -493,6 +511,7 @@ function iconPaths(name) {
     16: `icons/status/${name}-16.png`,
     48: `icons/status/${name}-48.png`,
     96: `icons/status/${name}-96.png`,
+    128: `icons/status/${name}-128.png`,
   };
 }
 
@@ -512,3 +531,8 @@ function normalizeAnalysisMode(mode) {
 function isAnalyzableUrl(url) {
   return url.startsWith('http://') || url.startsWith('https://') || url.startsWith('file://');
 }
+
+function isTrustedExtensionSender(sender) {
+  return sender.id === chrome.runtime.id && !sender.tab;
+}
+

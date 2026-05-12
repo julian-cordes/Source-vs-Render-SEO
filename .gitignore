@@ -1,0 +1,18 @@
+# Packaged extension artifacts
+*.zip
+*.crx
+
+# Local/private notes
+.claude/
+local-notes/
+*.local.md
+*.private.md
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+*.tmp
+*.log
+CLAUDE.md
+AGENTS.md
+PLAN.md
