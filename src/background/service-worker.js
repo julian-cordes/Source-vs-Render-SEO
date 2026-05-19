@@ -22,10 +22,9 @@ const ICON_PATHS = {
   'not-indexable-content-index-diff': iconPaths('not-indexable-content-index-diff'),
 };
 
-const INDEXABILITY_DIFF_FIELDS = ['metaRobots', 'canonical'];
 const CONTENT_DIFF_FIELDS = ['title', 'metaDescription', 'h1s', 'hreflangs'];
 const LOADING_ICON_PATH = ICON_PATHS['indexable-no-js-diff'];
-const ANALYSIS_VERSION = 'analysis-mode-v6';
+const ANALYSIS_VERSION = 'analysis-mode-v7';
 const ANALYSIS_MODE_KEY = 'seoInspectorAnalysisMode';
 const ANALYSIS_MODES = {
   COMPARE: 'compare',
@@ -438,11 +437,10 @@ async function loadIconImageData(path) {
 
 function getStatusIconKey(result) {
   const contentDiff = hasAnyFieldDiff(result.comparison, CONTENT_DIFF_FIELDS);
-  const indexabilityDiff = hasAnyFieldDiff(result.comparison, INDEXABILITY_DIFF_FIELDS);
-  const indexable = indexabilityDiff
-    ? isPageIndexable(result.sourceFields, result.url)
-    : isPageIndexable(result.renderedFields, result.url);
-  const indexabilityPrefix = indexable ? 'indexable' : 'not-indexable';
+  const sourceIndexable = isPageIndexable(result.sourceFields, result.url);
+  const renderedIndexable = isPageIndexable(result.renderedFields, result.url);
+  const indexabilityDiff = sourceIndexable !== renderedIndexable;
+  const indexabilityPrefix = sourceIndexable ? 'indexable' : 'not-indexable';
 
   if (contentDiff && indexabilityDiff) return `${indexabilityPrefix}-content-index-diff`;
   if (contentDiff) return `${indexabilityPrefix}-content-diff`;

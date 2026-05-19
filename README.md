@@ -2,6 +2,8 @@
 
 Chrome extension for checking how JavaScript rendering changes SEO-relevant signals.
 
+Current version: **1.1.1**
+
 **Source vs Render SEO** compares the raw HTML source of a page with the rendered DOM and shows whether JavaScript changed important SEO fields such as canonical, meta robots, title, meta description, H1s, or hreflangs.
 
 ![Source vs Render SEO popup](screenshot/screenshot.png)
@@ -42,6 +44,8 @@ Source vs Render SEO currently checks:
 ## Toolbar Icon States
 
 The toolbar icon summarizes indexability and JavaScript changes at a glance.
+
+An indexability change is only shown when the effective indexability changes between source and rendered DOM. For example, adding an explicit `index,follow` meta robots tag or a self-referencing canonical via JavaScript does not count as an indexability change if the source page was already indexable.
 
 | State | Meaning |
 |---|---|
@@ -86,7 +90,7 @@ For local `file://` pages, enable **Allow access to file URLs** on the extension
 
 ## Test Pages
 
-The `test-pages/` directory contains minimal HTML files for all toolbar icon states.
+The `test-pages/` directory contains minimal HTML files for all toolbar icon states plus focused regression cases for hreflang changes and explicit index signals added by JavaScript without changing effective indexability.
 
 ## Project Structure
 
@@ -141,6 +145,14 @@ Source vs Render SEO does not collect, transmit, sell, or share user data.
 The extension only analyzes the page you are currently visiting. Results are stored locally in Chrome session storage and are cleared with the browser session or tab lifecycle.
 
 There are no analytics, no tracking scripts, no remote logging, and no third-party services.
+
+## Changelog
+
+### 1.1.1
+
+- Fixed toolbar icon logic so canonical/meta robots changes only count as indexability changes when effective indexability changes.
+- Added regression test page for pages where JavaScript adds explicit index signals while the page remains indexable.
+- Added a dedicated hreflang comparison test page.
 
 ## License
 
