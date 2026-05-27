@@ -24,7 +24,7 @@ const ICON_PATHS = {
 
 const CONTENT_DIFF_FIELDS = ['title', 'metaDescription', 'h1s', 'hreflangs'];
 const LOADING_ICON_PATH = ICON_PATHS['indexable-no-js-diff'];
-const ANALYSIS_VERSION = 'analysis-mode-v7';
+const ANALYSIS_VERSION = 'analysis-mode-v8';
 const ANALYSIS_MODE_KEY = 'seoInspectorAnalysisMode';
 const ANALYSIS_MODES = {
   COMPARE: 'compare',
@@ -437,8 +437,8 @@ async function loadIconImageData(path) {
 
 function getStatusIconKey(result) {
   const contentDiff = hasAnyFieldDiff(result.comparison, CONTENT_DIFF_FIELDS);
-  const sourceIndexable = isPageIndexable(result.sourceFields, result.url);
-  const renderedIndexable = isPageIndexable(result.renderedFields, result.url);
+  const sourceIndexable = isResultIndexable(result.sourceFields, result.url, result.httpStatus);
+  const renderedIndexable = isResultIndexable(result.renderedFields, result.url, result.httpStatus);
   const indexabilityDiff = sourceIndexable !== renderedIndexable;
   const indexabilityPrefix = sourceIndexable ? 'indexable' : 'not-indexable';
 
@@ -456,19 +456,27 @@ function getIconStateForAnalysis(result) {
   }
 
   if (result.analysisMode === ANALYSIS_MODES.HTML && result.sourceFields) {
-    return getIndexabilityOnlyIconKey(result.sourceFields, result.url);
+    return getIndexabilityOnlyIconKey(result.sourceFields, result.url, result.httpStatus);
   }
 
   if (result.analysisMode === ANALYSIS_MODES.RENDERED && result.renderedFields) {
-    return getIndexabilityOnlyIconKey(result.renderedFields, result.url);
+    return getIndexabilityOnlyIconKey(result.renderedFields, result.url, result.httpStatus);
   }
 
   return null;
 }
 
-function getIndexabilityOnlyIconKey(fields, url) {
-  const indexable = isPageIndexable(fields, url);
+function getIndexabilityOnlyIconKey(fields, url, httpStatus) {
+  const indexable = isResultIndexable(fields, url, httpStatus);
   return `${indexable ? 'indexable' : 'not-indexable'}-no-js-diff`;
+}
+
+function isResultIndexable(fields, pageUrl, httpStatus) {
+  return isIndexableHttpStatus(httpStatus) && isPageIndexable(fields, pageUrl);
+}
+
+function isIndexableHttpStatus(status) {
+  return status === null || (status >= 200 && status < 400);
 }
 
 function hasAnyFieldDiff(comparison, fields) {

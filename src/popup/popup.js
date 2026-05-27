@@ -583,6 +583,7 @@ function isDisplayedIndexable(data) {
   return !hasNoindexDirective(fields.metaRobots) && isSelfReferencingCanonical(fields.canonical, data.url);
 }
 
+
 function hasNoindexDirective(metaRobots) {
   if (!metaRobots) return false;
   const directives = String(metaRobots)
