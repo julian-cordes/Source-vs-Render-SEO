@@ -24,7 +24,7 @@ const ICON_PATHS = {
 
 const CONTENT_DIFF_FIELDS = ['title', 'metaDescription', 'h1s', 'hreflangs'];
 const LOADING_ICON_PATH = ICON_PATHS['indexable-no-js-diff'];
-const ANALYSIS_VERSION = 'analysis-mode-v8';
+const ANALYSIS_VERSION = 'analysis-mode-v10';
 const ANALYSIS_MODE_KEY = 'seoInspectorAnalysisMode';
 const ANALYSIS_MODES = {
   COMPARE: 'compare',
@@ -131,7 +131,7 @@ async function analyzeTab(tabId, url, requestedMode) {
   // 1. Fetch raw HTML + HTTP status
   if (needsSource) {
     try {
-      const resp = await fetch(url, { cache: 'no-cache' });
+      const resp = await fetch(url, { cache: 'no-cache', credentials: 'include' });
       httpStatus = resp.status;
       const html = await resp.text();
       sourceFields = await parseRawHtml(html);
@@ -166,6 +166,7 @@ async function analyzeTab(tabId, url, requestedMode) {
   const iconState = getIconStateForAnalysis({
     analysisMode,
     analysisState,
+    httpStatus,
     url,
     sourceFields,
     renderedFields,
@@ -476,7 +477,7 @@ function isResultIndexable(fields, pageUrl, httpStatus) {
 }
 
 function isIndexableHttpStatus(status) {
-  return status === null || (status >= 200 && status < 400);
+  return status == null || (status >= 200 && status < 400);
 }
 
 function hasAnyFieldDiff(comparison, fields) {
