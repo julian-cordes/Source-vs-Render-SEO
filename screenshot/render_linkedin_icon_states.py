@@ -4,7 +4,7 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "screenshot" / "linkedin-icon-states.png"
+OUT = ROOT / "screenshot" / "linkedin-icon-states-en.png"
 
 W, H = 1080, 1350
 PAD_X = 76
@@ -122,14 +122,14 @@ def main():
     subtitle_font = font(FONT_REGULAR, 24)
     eyebrow_font = font(FONT_SEMIBOLD, 18)
 
-    draw.text((PAD_X, 48), "Was zeigt das AddOn Icon?", font=title_font, fill=(20, 32, 50))
-    draw.text((PAD_X, 108), "Indexierbarkeit und JavaScript-Änderungen auf einen Blick", font=subtitle_font, fill=(75, 89, 109))
+    draw.text((PAD_X, 48), "What does the add-on icon show?", font=title_font, fill=(20, 32, 50))
+    draw.text((PAD_X, 108), "Indexability and JavaScript changes at a glance", font=subtitle_font, fill=(75, 89, 109))
 
     legend_y = 154
     legend = [
-        ((28, 166, 80), "indexierbar"),
-        ((224, 55, 64), "nicht indexierbar"),
-        ((255, 198, 37), "Content geändert"),
+        ((28, 166, 80), "indexable"),
+        ((224, 55, 64), "not indexable"),
+        ((255, 198, 37), "content changed"),
     ]
     lx = PAD_X
     for color, txt in legend:
@@ -140,80 +140,80 @@ def main():
     icon_dir = ROOT / "icons" / "status"
     rows = [
         {
-            "label": "Indexierbar, keine Änderung durch JavaScript",
-            "note": "Quelltext und gerenderter DOM bleiben SEO-seitig gleich.",
+            "label": "Indexable, no JavaScript change",
+            "note": "Source HTML and rendered DOM remain SEO-identical.",
             "icon": icon_dir / "indexable-no-js-diff-128.png",
-            "url": "https://www.beispiel.de/",
+            "url": "https://www.example.com/",
             "bg": (255, 255, 255, 255),
             "outline": (219, 230, 243),
             "badge": (25, 143, 74),
             "tint": (236, 248, 241),
         },
         {
-            "label": "Nicht indexierbar, keine Änderung durch JavaScript",
-            "note": "Der nicht indexierbare Status bleibt auch nach dem Rendern bestehen.",
+            "label": "Not indexable, no JavaScript change",
+            "note": "The non-indexable status remains after rendering.",
             "icon": icon_dir / "not-indexable-no-js-diff-128.png",
-            "url": "https://www.beispiel.de/noindex",
+            "url": "https://www.example.com/noindex",
             "bg": (255, 255, 255, 255),
             "outline": (238, 223, 225),
             "badge": (199, 45, 55),
             "tint": (253, 239, 240),
         },
         {
-            "label": "Indexierbar, Content durch JavaScript geändert",
-            "note": "SEO-Inhalte wie Title, Description, H1 oder Hreflang weichen ab.",
+            "label": "Indexable, content changed by JavaScript",
+            "note": "SEO fields such as title, description, H1, or hreflang differ.",
             "icon": icon_dir / "indexable-content-diff-128.png",
-            "url": "https://www.beispiel.de/content",
+            "url": "https://www.example.com/content",
             "bg": (255, 255, 255, 255),
             "outline": (232, 225, 199),
             "badge": (25, 143, 74),
             "tint": (255, 249, 225),
         },
         {
-            "label": "Nicht indexierbar, Content durch JavaScript geändert",
-            "note": "Content ändert sich, die Seite bleibt dennoch nicht indexierbar.",
+            "label": "Not indexable, content changed by JavaScript",
+            "note": "Content changes, but the page remains non-indexable.",
             "icon": icon_dir / "not-indexable-content-diff-128.png",
-            "url": "https://www.beispiel.de/noindex-content",
+            "url": "https://www.example.com/noindex-content",
             "bg": (255, 255, 255, 255),
             "outline": (239, 224, 204),
             "badge": (199, 45, 55),
             "tint": (255, 248, 226),
         },
         {
-            "label": "Indexierbar im Quelltext, per JavaScript nicht indexierbar",
-            "note": "Nach dem Rendern kippt ein Indexierungssignal auf noindex/off-site.",
+            "label": "Indexable in source, not indexable after JavaScript",
+            "note": "After rendering, an indexability signal changes to noindex/off-site.",
             "icon": icon_dir / "indexable-index-diff-128.png",
-            "url": "https://www.beispiel.de/js-noindex",
+            "url": "https://www.example.com/js-noindex",
             "bg": (255, 255, 255, 255),
             "outline": (230, 220, 224),
             "badge": (25, 143, 74),
             "tint": (249, 238, 240),
         },
         {
-            "label": "Nicht indexierbar im Quelltext, per JavaScript indexierbar",
-            "note": "JavaScript macht die Seite erst im gerenderten DOM indexierbar.",
+            "label": "Not indexable in source, indexable after JavaScript",
+            "note": "JavaScript makes the page indexable only in the rendered DOM.",
             "icon": icon_dir / "not-indexable-index-diff-128.png",
-            "url": "https://www.beispiel.de/js-indexierbar",
+            "url": "https://www.example.com/js-indexable",
             "bg": (255, 255, 255, 255),
             "outline": (218, 232, 224),
             "badge": (199, 45, 55),
             "tint": (235, 248, 240),
         },
         {
-            "label": "Indexierbar, Content und Indexierung ändern sich",
-            "note": "Inhalte ändern sich und die Indexierbarkeit kippt durch JavaScript.",
+            "label": "Indexable, content and indexability change",
+            "note": "Content changes and JavaScript changes the indexability status.",
             "icon": icon_dir / "indexable-content-index-diff-128.png",
-            "url": "https://www.beispiel.de/js-content-noindex",
+            "url": "https://www.example.com/js-content-noindex",
             "bg": (255, 255, 255, 255),
             "outline": (232, 222, 202),
             "badge": (25, 143, 74),
             "tint": (255, 248, 224),
         },
         {
-            "label": "Nicht indexierbar, Content und Indexierung ändern sich",
-            "note": "Content ändert sich und JavaScript verändert den Indexierungsstatus.",
+            "label": "Not indexable, content and indexability change",
+            "note": "Content changes and JavaScript changes the indexability status.",
             "icon": icon_dir / "not-indexable-content-index-diff-128.png",
-            "url": "https://www.beispiel.de/js-content-index",
+            "url": "https://www.example.com/js-content-index",
             "bg": (255, 255, 255, 255),
             "outline": (232, 222, 202),
             "badge": (199, 45, 55),
