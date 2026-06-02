@@ -24,7 +24,7 @@ const ICON_PATHS = {
 
 const CONTENT_DIFF_FIELDS = ['title', 'metaDescription', 'h1s', 'hreflangs'];
 const LOADING_ICON_PATH = ICON_PATHS['indexable-no-js-diff'];
-const ANALYSIS_VERSION = 'analysis-mode-v10';
+const ANALYSIS_VERSION = 'analysis-mode-v11';
 const ANALYSIS_MODE_KEY = 'seoInspectorAnalysisMode';
 const ANALYSIS_MODES = {
   COMPARE: 'compare',
@@ -144,7 +144,9 @@ async function analyzeTab(tabId, url, requestedMode) {
   // 2. Get rendered DOM from content script
   if (needsRendered) {
     try {
-      renderedFields = await getRenderedFields(tabId);
+      const renderedSeo = await getRenderedSeo(tabId);
+      renderedFields = renderedSeo.fields;
+      httpStatus ??= renderedSeo.httpStatus;
     } catch (err) {
       console.warn('[Source vs Render SEO] content script failed:', err.message);
       if (analysisState === 'source_unavailable') {
@@ -313,7 +315,7 @@ async function ensureOffscreenDocument() {
 // Content script: get rendered fields
 // ---------------------------------------------------------------------------
 
-async function getRenderedFields(tabId) {
+async function getRenderedSeo(tabId) {
   try {
     return await sendMessageToTab(tabId);
   } catch {
@@ -332,7 +334,10 @@ function sendMessageToTab(tabId) {
       if (chrome.runtime.lastError) {
         reject(new Error(chrome.runtime.lastError.message));
       } else if (resp && resp.ok) {
-        resolve(resp.fields);
+        resolve({
+          fields: resp.fields,
+          httpStatus: normalizeHttpStatus(resp.httpStatus),
+        });
       } else {
         reject(new Error('no response'));
       }
@@ -533,6 +538,10 @@ async function getAnalysisMode() {
 
 function normalizeAnalysisMode(mode) {
   return Object.values(ANALYSIS_MODES).includes(mode) ? mode : ANALYSIS_MODES.COMPARE;
+}
+
+function normalizeHttpStatus(status) {
+  return Number.isInteger(status) && status > 0 ? status : null;
 }
 
 function isAnalyzableUrl(url) {
