@@ -2,7 +2,7 @@
 
 Chrome extension for checking how JavaScript rendering changes SEO-relevant signals.
 
-Current version: **1.1.3**
+Current version: **1.1.4**
 
 **Source vs Render SEO** compares the raw HTML source of a page with the rendered DOM and shows whether JavaScript changed important SEO fields such as canonical, meta robots, title, meta description, H1s, or hreflangs.
 
@@ -147,6 +147,10 @@ The extension only analyzes the page you are currently visiting. Results are sto
 There are no analytics, no tracking scripts, no remote logging, and no third-party services.
 
 ## Changelog
+
+### 1.1.4
+
+- Fetch source HTML anonymously to avoid changing login and authenticated browser sessions.
 
 ### 1.1.3
 
