@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Source vs Render SEO Settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <main class="settings-shell">
+    <header class="settings-header">
+      <div>
+        <h1>Settings</h1>
+        <p>Source vs Render SEO</p>
+      </div>
+      <button id="close-settings" class="button button--ghost" type="button">Close settings</button>
+    </header>
+
+    <section class="settings-section" aria-labelledby="theme-heading">
+      <h2 id="theme-heading">Theme</h2>
+      <div class="choice-grid" role="radiogroup" aria-labelledby="theme-heading">
+        <label class="choice">
+          <input type="radio" name="theme" value="system">
+          <span>System</span>
+        </label>
+        <label class="choice">
+          <input type="radio" name="theme" value="light">
+          <span>Light</span>
+        </label>
+        <label class="choice">
+          <input type="radio" name="theme" value="dark">
+          <span>Dark</span>
+        </label>
+      </div>
+    </section>
+
+    <section class="settings-section" aria-labelledby="width-heading">
+      <h2 id="width-heading">Popup width</h2>
+      <div class="choice-grid" role="radiogroup" aria-labelledby="width-heading">
+        <label class="choice">
+          <input type="radio" name="popupWidth" value="standard">
+          <span>Standard</span>
+          <small>430px</small>
+        </label>
+        <label class="choice">
+          <input type="radio" name="popupWidth" value="wide">
+          <span>Wide</span>
+          <small>645px</small>
+        </label>
+        <label class="choice">
+          <input type="radio" name="popupWidth" value="maximum">
+          <span>Maximum</span>
+          <small>780px</small>
+        </label>
+      </div>
+    </section>
+
+    <p id="save-state" class="save-state" role="status" aria-live="polite"></p>
+  </main>
+
+  <script src="options.js"></script>
+</body>
+</html>

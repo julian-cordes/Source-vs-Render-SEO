@@ -8,6 +8,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const root = document.getElementById('root');
   root.appendChild(stateMessage('Loading...'));
 
+  getStoredUiSettings().then((settings) => {
+    applyUiSettings(settings);
+  });
+
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== 'local' || !changes[UI_SETTINGS_KEY]) return;
+    applyUiSettings(normalizeUiSettings(changes[UI_SETTINGS_KEY].newValue));
+  });
+
   chrome.runtime.sendMessage({ type: 'GET_SEO_DATA' }, (data) => {
     root.replaceChildren();
     if (chrome.runtime.lastError || !data) {
@@ -35,12 +44,47 @@ const FIELD_LABELS = {
 
 const IMPORTANT_FIELDS = ['title', 'metaDescription', 'h1s', 'hreflangs'];
 const QUICK_FIELDS = ['url', 'metaRobots', 'canonical'];
+const MISSING_CONTENT_FIELDS = ['title', 'metaDescription', 'h1s'];
+const UI_SETTINGS_KEY = 'seoInspectorUiSettings';
+const DEFAULT_UI_SETTINGS = {
+  theme: 'system',
+  popupWidth: 'standard',
+};
+const VALID_THEMES = ['system', 'light', 'dark'];
+const VALID_POPUP_WIDTHS = ['standard', 'wide', 'maximum'];
 
 function renderAll(data) {
   const frag = document.createDocumentFragment();
   frag.appendChild(renderModeControls(data.analysisMode));
   frag.appendChild(renderShell(data));
   return frag;
+}
+
+function getStoredUiSettings() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(UI_SETTINGS_KEY, (items) => {
+      if (chrome.runtime.lastError) {
+        resolve({ ...DEFAULT_UI_SETTINGS });
+        return;
+      }
+      resolve(normalizeUiSettings(items?.[UI_SETTINGS_KEY]));
+    });
+  });
+}
+
+function normalizeUiSettings(settings) {
+  const normalized = { ...DEFAULT_UI_SETTINGS, ...(settings ?? {}) };
+  if (!VALID_THEMES.includes(normalized.theme)) normalized.theme = DEFAULT_UI_SETTINGS.theme;
+  if (!VALID_POPUP_WIDTHS.includes(normalized.popupWidth)) {
+    normalized.popupWidth = DEFAULT_UI_SETTINGS.popupWidth;
+  }
+  return normalized;
+}
+
+function applyUiSettings(settings) {
+  const normalized = normalizeUiSettings(settings);
+  document.documentElement.dataset.theme = normalized.theme;
+  document.documentElement.dataset.popupWidth = normalized.popupWidth;
 }
 
 function renderShell(data) {
@@ -71,8 +115,22 @@ function renderHeader() {
 
   brand.appendChild(logo);
   brand.appendChild(copy);
+
+  const settingsButton = document.createElement('button');
+  settingsButton.type = 'button';
+  settingsButton.className = 'settings-button';
+  settingsButton.title = 'Settings';
+  settingsButton.setAttribute('aria-label', 'Settings');
+  settingsButton.appendChild(svgIcon('settings'));
+  settingsButton.addEventListener('click', openSettingsPage);
+
   el.appendChild(brand);
+  el.appendChild(settingsButton);
   return el;
+}
+
+function openSettingsPage() {
+  chrome.runtime.openOptionsPage();
 }
 
 function renderModeControls(activeMode) {
@@ -134,7 +192,7 @@ function renderOverview(data) {
   wrap.appendChild(statusCard({
     tone: indexable ? 'green' : 'red',
     icon: indexable ? 'ok' : '!',
-    title: indexable ? 'Index' : 'No\nIndex',
+    title: indexable ? 'Index' : 'Not\nIndexable',
     subtitle: '',
   }));
 
@@ -220,6 +278,7 @@ function canonicalQuickRow(data) {
   const row = infoRow('target', 'Canonical', getFieldValue('canonical', data), {
     fieldKey: 'canonical',
     data,
+    problem: isDisplayedFieldProblem('canonical', data),
   });
 
   if (data.analysisMode !== 'compare' || !fieldResult?.diff) {
@@ -229,6 +288,7 @@ function canonicalQuickRow(data) {
   const valueEl = row.querySelector('.info-row__value');
   if (!valueEl) return row;
 
+  resetValueStateClasses(valueEl);
   valueEl.replaceChildren();
   appendInlineDiff(valueEl, 'canonical', fieldResult.source, fieldResult.rendered, data);
   return row;
@@ -246,7 +306,11 @@ function renderImportantSignals(data) {
 
 function signalRow(key, data) {
   const fieldResult = data.comparison?.fields?.[key];
-  const row = infoRow(fieldIcon(key), FIELD_LABELS[key], getFieldValue(key, data), { fieldKey: key, data });
+  const row = infoRow(fieldIcon(key), FIELD_LABELS[key], getFieldValue(key, data), {
+    fieldKey: key,
+    data,
+    problem: isDisplayedFieldProblem(key, data),
+  });
 
   if (data.analysisMode !== 'compare' || !fieldResult?.diff) {
     return row;
@@ -254,6 +318,7 @@ function signalRow(key, data) {
 
   const valueEl = row.querySelector('.info-row__value');
   if (!valueEl) return row;
+  resetValueStateClasses(valueEl);
   valueEl.replaceChildren();
   appendInlineDiff(valueEl, key, fieldResult.source, fieldResult.rendered, data);
   return row;
@@ -270,6 +335,7 @@ function renderSection(title) {
 function infoRow(icon, label, value, options = {}) {
   const row = div('info-row');
   const iconEl = span(`info-row__icon info-row__icon--${icon}`);
+  if (options.problem) iconEl.classList.add('info-row__icon--problem');
   iconEl.appendChild(svgIcon(icon));
   const labelEl = div('info-row__label');
   labelEl.textContent = label;
@@ -297,6 +363,20 @@ function getFieldValue(key, data) {
   return data.renderedFields?.[key] ?? data.sourceFields?.[key] ?? null;
 }
 
+function getDisplayedFields(data) {
+  if (data.analysisMode === 'html') return data.sourceFields;
+  if (data.analysisMode === 'rendered') return data.renderedFields;
+  return data.renderedFields ?? data.sourceFields;
+}
+
+function isDisplayedFieldProblem(key, data) {
+  const fields = getDisplayedFields(data);
+  if (!fields) return false;
+  if (key === 'metaRobots') return hasNoindexDirective(fields.metaRobots);
+  if (key === 'canonical') return isCanonicalProblemValue(fields.canonical, data);
+  return false;
+}
+
 function displayValue(key, value, data) {
   if (key === 'canonical' && value && isSelfReferencingCanonical(value, data.url)) {
     return 'Self-referencing';
@@ -305,6 +385,11 @@ function displayValue(key, value, data) {
 }
 
 function appendValueContent(el, key, value, data) {
+  if (isMissingContentValue(key, value)) {
+    appendMissingContentValue(el);
+    return;
+  }
+
   if (value === null || value === undefined) {
     el.textContent = 'not set';
     el.classList.add('muted');
@@ -318,6 +403,7 @@ function appendValueContent(el, key, value, data) {
     renderHreflangs(el, display, data);
   } else if (key === 'metaRobots') {
     el.textContent = display;
+    if (hasNoindexDirective(display)) el.classList.add('indexability-cause');
   } else if (key === 'canonical') {
     renderCanonicalValue(el, display, data);
   } else {
@@ -360,8 +446,10 @@ function appendPlainCanonicalValue(el, value, data) {
   try {
     const href = new URL(value, data.url).href;
     el.appendChild(renderExternalLink(href, display));
+    if (isCanonicalProblemValue(value, data)) el.classList.add('indexability-cause');
   } catch {
     el.textContent = display;
+    if (isCanonicalProblemValue(value, data)) el.classList.add('indexability-cause');
   }
 }
 
@@ -369,7 +457,10 @@ function appendInlineDiff(el, key, sourceValue, renderedValue, data) {
   const sourceLine = div('inline-diff__line');
   appendPlainValue(sourceLine, key, sourceValue, data);
 
-  const renderedLine = div('inline-diff__line inline-diff__line--rendered');
+  const renderedLine = div('inline-diff__line');
+  if (shouldHighlightRenderedDiff(key, sourceValue, renderedValue)) {
+    renderedLine.classList.add('inline-diff__line--rendered');
+  }
   const renderedValueEl = span('inline-diff__value');
   appendPlainValue(renderedValueEl, key, renderedValue, data);
   renderedLine.appendChild(renderedValueEl);
@@ -384,6 +475,33 @@ function appendPlainValue(el, key, value, data) {
     return;
   }
   appendValueContent(el, key, value, data);
+}
+
+function shouldHighlightRenderedDiff(key, sourceValue, renderedValue) {
+  if (!MISSING_CONTENT_FIELDS.includes(key)) return true;
+  return !(isMissingContentValue(key, sourceValue) && !isMissingContentValue(key, renderedValue));
+}
+
+function isMissingContentValue(key, value) {
+  if (!MISSING_CONTENT_FIELDS.includes(key)) return false;
+  if (value === null || value === undefined) return true;
+  if (Array.isArray(value)) {
+    return value.length === 0 || value.every((item) => String(item ?? '').trim() === '');
+  }
+  return String(value).trim() === '';
+}
+
+function appendMissingContentValue(el) {
+  el.textContent = 'not set';
+  el.classList.add('value-missing');
+}
+
+function resetValueStateClasses(el) {
+  el.classList.remove('indexability-cause', 'value-missing', 'muted');
+}
+
+function isCanonicalProblemValue(value, data) {
+  return Boolean(value && data?.url && !isSelfReferencingCanonical(value, data.url));
 }
 
 function renderArrayValue(el, value) {
@@ -532,6 +650,10 @@ function svgIcon(name, className = 'icon') {
       ['path', { d: 'M2 12h20' }],
       ['path', { d: 'M12 2a15.3 15.3 0 0 1 0 20' }],
       ['path', { d: 'M12 2a15.3 15.3 0 0 0 0 20' }],
+    ],
+    settings: [
+      ['path', { d: 'M12.2 2h-.4a2 2 0 0 0-2 1.7l-.1.8a2 2 0 0 1-1.1 1.5l-.7.4a2 2 0 0 1-1.8.1l-.7-.3a2 2 0 0 0-2.5.8l-.2.4a2 2 0 0 0 .4 2.6l.6.5a2 2 0 0 1 .7 1.6v.8a2 2 0 0 1-.7 1.6l-.6.5a2 2 0 0 0-.4 2.6l.2.4a2 2 0 0 0 2.5.8l.7-.3a2 2 0 0 1 1.8.1l.7.4a2 2 0 0 1 1.1 1.5l.1.8a2 2 0 0 0 2 1.7h.4a2 2 0 0 0 2-1.7l.1-.8a2 2 0 0 1 1.1-1.5l.7-.4a2 2 0 0 1 1.8-.1l.7.3a2 2 0 0 0 2.5-.8l.2-.4a2 2 0 0 0-.4-2.6l-.6-.5a2 2 0 0 1-.7-1.6v-.8a2 2 0 0 1 .7-1.6l.6-.5a2 2 0 0 0 .4-2.6l-.2-.4a2 2 0 0 0-2.5-.8l-.7.3a2 2 0 0 1-1.8-.1l-.7-.4a2 2 0 0 1-1.1-1.5l-.1-.8a2 2 0 0 0-2-1.7Z' }],
+      ['circle', { cx: '12', cy: '12', r: '3' }],
     ],
     file: [
       ['path', { d: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z' }],

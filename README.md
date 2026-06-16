@@ -2,7 +2,7 @@
 
 Chrome extension for checking how JavaScript rendering changes SEO-relevant signals.
 
-Current version: **1.1.4**
+Current version: **1.2.1**
 
 **Source vs Render SEO** compares the raw HTML source of a page with the rendered DOM and shows whether JavaScript changed important SEO fields such as canonical, meta robots, title, meta description, H1s, or hreflangs.
 
@@ -24,6 +24,8 @@ The extension then highlights differences directly in the popup and updates the 
 - Check indexability via `meta robots` and canonical
 - Show a state-aware toolbar icon for each page
 - Switch between Compare, HTML-only, and Rendered-only modes
+- Choose System, Light, or Dark theme from the settings page
+- Adjust popup width between Standard, Wide, and Maximum
 - Display inline source-vs-rendered differences next to each field
 - Keep visible URLs clickable without visual clutter
 - Works on regular websites and local test files when file URL access is enabled
@@ -75,6 +77,15 @@ The popup has three modes:
 
 The selected mode is remembered locally.
 
+## Settings
+
+Open the settings page with the gear button in the popup header.
+
+- **Theme**: System, Light, or Dark
+- **Popup width**: Standard (~430px), Wide (~645px), or Maximum (~780px)
+
+Settings are stored locally in `chrome.storage.local`.
+
 ## Installation For Development
 
 There is no build step.
@@ -90,7 +101,7 @@ For local `file://` pages, enable **Allow access to file URLs** on the extension
 
 ## Test Pages
 
-The `test-pages/` directory contains minimal HTML files for all toolbar icon states plus focused regression cases for hreflang changes and explicit index signals added by JavaScript without changing effective indexability.
+The `test-pages/` directory contains minimal HTML files for all toolbar icon states plus focused regression cases for hreflang changes, explicit index signals added by JavaScript without changing effective indexability, and simultaneous `noindex` plus non-self-referencing canonical blockers.
 
 ## Project Structure
 
@@ -104,6 +115,9 @@ src/
   content/content-script.js
   offscreen/offscreen.html
   offscreen/offscreen.js
+  options/options.html
+  options/options.css
+  options/options.js
   popup/popup.html
   popup/popup.css
   popup/popup.js
@@ -147,6 +161,18 @@ The extension only analyzes the page you are currently visiting. Results are sto
 There are no analytics, no tracking scripts, no remote logging, and no third-party services.
 
 ## Changelog
+
+### 1.2.1
+
+- Fixed Meta Robots inline diffs so neutral values like `index,follow` are no longer shown in red or bold when only the compared value is problematic.
+
+### 1.2.0
+
+- Added a settings page for System/Light/Dark theme and popup width.
+- Added a popup header settings button.
+- Highlighted `noindex`/`none`, non-self-referencing canonicals, and missing title/description/H1 values more clearly.
+- Renamed the non-indexable status card from "No Index" to "Not Indexable".
+- Added a manual test page for simultaneous `noindex` and non-self-referencing canonical signals.
 
 ### 1.1.4
 

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "__MSG_extensionName__",
-  "version": "1.1.4",
+  "version": "1.2.1",
   "description": "__MSG_extensionDescription__",
   "permissions": [
     "activeTab",
@@ -39,6 +39,7 @@
       "128": "icons/status/indexable-no-js-diff-128.png"
     }
   },
+  "options_page": "src/options/options.html",
   "icons": {
     "16": "icons/store/source-vs-render-seo-16.png",
     "48": "icons/store/source-vs-render-seo-48.png",

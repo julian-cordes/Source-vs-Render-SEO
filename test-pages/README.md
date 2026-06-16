@@ -1,6 +1,6 @@
 # Source vs Render SEO Test Pages
 
-Minimal static pages for manually testing all eight toolbar icon states, inline source-vs-rendered differences, the dedicated hreflang comparison case, and the explicit index-signals-without-indexability-change case.
+Minimal static pages for manually testing all eight toolbar icon states, inline source-vs-rendered differences, the dedicated hreflang comparison case, the explicit index-signals-without-indexability-change case, and combined indexability blockers.
 
 Run a local server from the project root:
 
@@ -31,3 +31,4 @@ Notable focused regression pages:
 
 - `09-indexable-hreflang-diff.html`: verifies hreflang changes are detected as content differences.
 - `10-indexable-added-index-signals-title-diff.html`: verifies added `meta robots` and self-referencing canonical tags do not count as an indexability change when the page remains indexable.
+- `11-not-indexable-noindex-nonself-canonical.html`: verifies the popup highlights both a `noindex` robots directive and a non-self-referencing canonical.
